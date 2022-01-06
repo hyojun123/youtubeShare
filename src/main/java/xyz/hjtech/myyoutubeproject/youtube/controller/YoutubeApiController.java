@@ -21,6 +21,7 @@ public class YoutubeApiController {
 
     private final YoutubeService youtubeService;
 
+    @CrossOrigin("*")
     @GetMapping("/youtube/{searchTxt}")
     public List<YoutubeEntity> findBySearchTxt(@PathVariable String searchTxt) {
         System.out.println("searchTxt : " + searchTxt);
