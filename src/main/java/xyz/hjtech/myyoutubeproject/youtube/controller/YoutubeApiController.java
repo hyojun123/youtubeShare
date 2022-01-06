@@ -14,6 +14,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class YoutubeApiController {
 
+    @GetMapping("/health")
+    public String healthCheck() {
+        return "success";
+    }
+
     private final YoutubeService youtubeService;
 
     @CrossOrigin("*")
