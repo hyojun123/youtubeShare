@@ -27,7 +27,7 @@ public class YoutubeService {
         mergedList.addAll(findByDescriptionList);
         mergedList.addAll(findBySearchTxtList);
 
-        List<YoutubeEntity> list = DeDuplicationUtils.DeDuplication(mergedList, YoutubeEntity::getId);
+        List<YoutubeEntity> list = DeDuplicationUtils.DeDuplication(mergedList, YoutubeEntity::getVideoId);
 
         if(list.size() >= MIN_SIZE) {
             return list;
@@ -40,7 +40,8 @@ public class YoutubeService {
 
     public List<YoutubeEntity> findByVideoIds(List<String> ids) {
         if(ids.size() != 0) {
-            return youtubeRepository.findByVideoIds(ids);
+
+            return DeDuplicationUtils.DeDuplication(youtubeRepository.findByVideoIds(ids), YoutubeEntity::getVideoId);
         }
 
         return new ArrayList<>();
