@@ -37,6 +37,14 @@ public class YoutubeService {
         youtubeRepository.saveAll(searchList);
         return searchList;
     }
+
+    public List<YoutubeEntity> findByVideoIds(List<String> ids) {
+        if(ids.size() != 0) {
+            return youtubeRepository.findByVideoIds(ids);
+        }
+
+        return new ArrayList<>();
+    }
         
     // 구글api에서 가져오기
     private List<YoutubeEntity> findBySearchTxtByGoogleApi(String searchTxt) {
@@ -65,4 +73,6 @@ public class YoutubeService {
         });
         return result;
     }
+
+
 }

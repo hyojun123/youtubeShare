@@ -1,10 +1,7 @@
 package xyz.hjtech.myyoutubeproject.youtube.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import xyz.hjtech.myyoutubeproject.youtube.model.YoutubeEntity;
 import xyz.hjtech.myyoutubeproject.youtube.service.YoutubeService;
 
@@ -24,7 +21,12 @@ public class YoutubeApiController {
     @CrossOrigin("*")
     @GetMapping("/youtube/{searchTxt}")
     public List<YoutubeEntity> findBySearchTxt(@PathVariable String searchTxt) {
-        System.out.println("searchTxt : " + searchTxt);
         return youtubeService.findBySearchTxt(searchTxt);
+    }
+
+    @CrossOrigin("*")
+    @GetMapping("/youtube/like")
+    public List<YoutubeEntity> findByVideoIds(@RequestParam("ids") List<String> ids){
+        return youtubeService.findByVideoIds(ids);
     }
 }
