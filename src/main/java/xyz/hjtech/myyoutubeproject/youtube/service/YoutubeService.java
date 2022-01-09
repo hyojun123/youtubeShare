@@ -2,19 +2,24 @@ package xyz.hjtech.myyoutubeproject.youtube.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import xyz.hjtech.myyoutubeproject.util.DeDuplicationUtils;
+import xyz.hjtech.myyoutubeproject.youtube.model.BoastEntity;
 import xyz.hjtech.myyoutubeproject.youtube.model.YoutubeEntity;
+import xyz.hjtech.myyoutubeproject.youtube.model.dto.BoastDto;
+import xyz.hjtech.myyoutubeproject.youtube.model.dto.PostBoastDto;
+import xyz.hjtech.myyoutubeproject.youtube.repository.BoastRepository;
 import xyz.hjtech.myyoutubeproject.youtube.repository.YoutubeRepository;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class YoutubeService {
     private final YoutubeRepository youtubeRepository;
+    private final BoastRepository boastRepository;
     private final static int MIN_SIZE = 50;
     private final static int MAX_SIZE = 50;
 
@@ -40,7 +45,6 @@ public class YoutubeService {
 
     public List<YoutubeEntity> findByVideoIds(List<String> ids) {
         if(ids.size() != 0) {
-
             return DeDuplicationUtils.DeDuplication(youtubeRepository.findByVideoIds(ids), YoutubeEntity::getVideoId);
         }
 
@@ -76,4 +80,50 @@ public class YoutubeService {
     }
 
 
+    @Transactional
+    public void postBoast(PostBoastDto boastDto) {
+        BoastEntity boastEntity = null;
+        List<YoutubeEntity> boastList = new ArrayList<>(youtubeRepository.findByVideoIds(Arrays.asList(boastDto.getItems().split(","))));
+        if(boastRepository.findByUserUuid(boastDto.getUserUuid()) != null) {
+            boastEntity = boastRepository.findByUserUuid(boastDto.getUserUuid());
+            boastEntity.setBoastList(boastList);
+            boastEntity.setModTsp(new Date());
+        } else {
+            boastEntity = new BoastEntity(boastDto, boastList);
+
+            boastRepository.save(boastEntity);
+        }
+    }
+
+    public List<BoastDto> findAllBoastList() {
+        List<BoastEntity> entities = boastRepository.findAllByOrderByLikeCntDescModTspDesc();
+        List<BoastDto> result = new ArrayList<>();
+        entities.forEach(t -> {
+            result.add(new BoastDto(t));
+        });
+        return result;
+    }
+
+
+    public List<BoastDto> findBoastBySearchTxt(String searchTxt) {
+        List<BoastEntity> entities = boastRepository.findByTitleContains(searchTxt);
+        List<BoastDto> result = new ArrayList<>();
+        entities.forEach(t -> {
+            result.add(new BoastDto(t));
+        });
+        return result;
+    }
+
+    @Transactional
+    public BoastEntity findBoastById(Long id) {
+        BoastEntity entity = boastRepository.findById(id).get();
+        entity.setViewCnt(entity.getViewCnt() + 1);
+        return entity;
+    }
+
+    @Transactional
+    public void postLikeBoast(Long id) {
+        BoastEntity entity = boastRepository.findById(id).get();
+        entity.setLikeCnt(entity.getLikeCnt() + 1);
+    }
 }
