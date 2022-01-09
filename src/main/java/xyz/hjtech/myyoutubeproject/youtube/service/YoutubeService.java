@@ -8,6 +8,7 @@ import xyz.hjtech.myyoutubeproject.util.DeDuplicationUtils;
 import xyz.hjtech.myyoutubeproject.youtube.model.BoastEntity;
 import xyz.hjtech.myyoutubeproject.youtube.model.YoutubeEntity;
 import xyz.hjtech.myyoutubeproject.youtube.model.dto.BoastDto;
+import xyz.hjtech.myyoutubeproject.youtube.model.dto.DeleteBoastDto;
 import xyz.hjtech.myyoutubeproject.youtube.model.dto.PostBoastDto;
 import xyz.hjtech.myyoutubeproject.youtube.repository.BoastRepository;
 import xyz.hjtech.myyoutubeproject.youtube.repository.YoutubeRepository;
@@ -84,9 +85,10 @@ public class YoutubeService {
     public void postBoast(PostBoastDto boastDto) {
         BoastEntity boastEntity = null;
         List<YoutubeEntity> boastList = new ArrayList<>(youtubeRepository.findByVideoIds(Arrays.asList(boastDto.getItems().split(","))));
+        List<YoutubeEntity> list = DeDuplicationUtils.DeDuplication(boastList, YoutubeEntity::getVideoId);
         if(boastRepository.findByUserUuid(boastDto.getUserUuid()) != null) {
             boastEntity = boastRepository.findByUserUuid(boastDto.getUserUuid());
-            boastEntity.setBoastList(boastList);
+            boastEntity.setBoastList(list);
             boastEntity.setModTsp(new Date());
         } else {
             boastEntity = new BoastEntity(boastDto, boastList);
@@ -122,8 +124,15 @@ public class YoutubeService {
     }
 
     @Transactional
-    public void postLikeBoast(Long id) {
+    public BoastEntity postLikeBoast(Long id) {
         BoastEntity entity = boastRepository.findById(id).get();
         entity.setLikeCnt(entity.getLikeCnt() + 1);
+
+        return entity;
+    }
+
+    @Transactional
+    public void deleteBoast(DeleteBoastDto boastDto) {
+        boastRepository.deleteByUserUuid(boastDto.getUserUuid());
     }
 }

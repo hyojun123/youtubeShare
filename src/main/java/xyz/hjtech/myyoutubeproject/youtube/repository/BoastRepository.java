@@ -13,4 +13,6 @@ public interface BoastRepository extends JpaRepository<BoastEntity, Long> {
     List<BoastEntity> findByTitleContains(String searchTxt);
 
     BoastEntity findByUserUuid(String userUuid);
+
+    void deleteByUserUuid(String userUuid);
 }

@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import xyz.hjtech.myyoutubeproject.youtube.model.BoastEntity;
 import xyz.hjtech.myyoutubeproject.youtube.model.YoutubeEntity;
 import xyz.hjtech.myyoutubeproject.youtube.model.dto.BoastDto;
+import xyz.hjtech.myyoutubeproject.youtube.model.dto.DeleteBoastDto;
 import xyz.hjtech.myyoutubeproject.youtube.model.dto.PostBoastDto;
 import xyz.hjtech.myyoutubeproject.youtube.service.YoutubeService;
 
@@ -59,7 +60,13 @@ public class YoutubeApiController {
 
     @CrossOrigin("*")
     @PostMapping("/youtube/boast/like/{id}")
-    public void postLikeBoast(@PathVariable("id") Long id) {
-        youtubeService.postLikeBoast(id);
+    public BoastEntity postLikeBoast(@PathVariable("id") Long id) {
+        return youtubeService.postLikeBoast(id);
+    }
+
+    @CrossOrigin("*")
+    @DeleteMapping("/youtube/boast")
+    public void deleteBoast(@RequestBody DeleteBoastDto boastDto) {
+        youtubeService.deleteBoast(boastDto);
     }
 }
