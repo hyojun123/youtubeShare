@@ -18,4 +18,6 @@ public interface YoutubeRepository extends JpaRepository<YoutubeEntity, Long> {
 
     @Query(nativeQuery = true, value = "SELECT * FROM YoutubeEntity as y WHERE y.videoId IN (:videoIds)")
     List<YoutubeEntity> findByVideoIds(@Param("videoIds") List<String> ids);
+
+    YoutubeEntity findByVideoId(String videoId);
 }

@@ -6,11 +6,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import xyz.hjtech.myyoutubeproject.util.DeDuplicationUtils;
 import xyz.hjtech.myyoutubeproject.youtube.model.BoastEntity;
+import xyz.hjtech.myyoutubeproject.youtube.model.LikeYoutubeEntity;
 import xyz.hjtech.myyoutubeproject.youtube.model.YoutubeEntity;
-import xyz.hjtech.myyoutubeproject.youtube.model.dto.BoastDto;
-import xyz.hjtech.myyoutubeproject.youtube.model.dto.DeleteBoastDto;
-import xyz.hjtech.myyoutubeproject.youtube.model.dto.PostBoastDto;
+import xyz.hjtech.myyoutubeproject.youtube.model.dto.*;
 import xyz.hjtech.myyoutubeproject.youtube.repository.BoastRepository;
+import xyz.hjtech.myyoutubeproject.youtube.repository.LikeYoutubeRepository;
 import xyz.hjtech.myyoutubeproject.youtube.repository.YoutubeRepository;
 
 import java.util.*;
@@ -21,10 +21,11 @@ import java.util.stream.Collectors;
 public class YoutubeService {
     private final YoutubeRepository youtubeRepository;
     private final BoastRepository boastRepository;
+    private final LikeYoutubeRepository likeYoutubeRepository;
     private final static int MIN_SIZE = 50;
     private final static int MAX_SIZE = 50;
 
-    public List<YoutubeEntity> findBySearchTxt(String searchTxt) {
+    public List<GetYoutubeDto> findBySearchTxt(String searchTxt, String userUuid) {
         List<YoutubeEntity> findByTitleList = youtubeRepository.findByTitleContains(searchTxt);
         List<YoutubeEntity> findByDescriptionList = youtubeRepository.findByDescriptionContains(searchTxt);
         List<YoutubeEntity> findBySearchTxtList = youtubeRepository.findBySearchTxt(searchTxt);
@@ -34,24 +35,34 @@ public class YoutubeService {
         mergedList.addAll(findBySearchTxtList);
 
         List<YoutubeEntity> list = DeDuplicationUtils.DeDuplication(mergedList, YoutubeEntity::getVideoId);
-
+        List<GetYoutubeDto> result = null;
         if(list.size() >= MIN_SIZE) {
-            return list;
+            result = list.stream().map(t -> {
+                return new GetYoutubeDto(t, false);
+            }).collect(Collectors.toList());
+            LikeYoutubeEntity likeYoutubeEntity = likeYoutubeRepository.findByUserUuid(userUuid);
+
+            if(likeYoutubeEntity != null) {
+                List<GetYoutubeDto> finalResult = result;
+                likeYoutubeEntity.getYoutubeList().forEach(t -> {
+                    finalResult.forEach(t2 -> {
+                        if(t2.getVideoId().equals(t.getVideoId())) {
+                           t2.setLike(true);
+                        }
+                    });
+                });
+            }
+            return result;
         }
 
         List<YoutubeEntity> searchList = findBySearchTxtByGoogleApi(searchTxt);
         youtubeRepository.saveAll(searchList);
-        return searchList;
+        result = searchList.stream().map(t -> {
+            return new GetYoutubeDto(t, false);
+        }).collect(Collectors.toList());
+        return result;
     }
 
-    public List<YoutubeEntity> findByVideoIds(List<String> ids) {
-        if(ids.size() != 0) {
-            return DeDuplicationUtils.DeDuplication(youtubeRepository.findByVideoIds(ids), YoutubeEntity::getVideoId);
-        }
-
-        return new ArrayList<>();
-    }
-        
     // 구글api에서 가져오기
     private List<YoutubeEntity> findBySearchTxtByGoogleApi(String searchTxt) {
         RestTemplate restTemplate = new RestTemplate();
@@ -74,20 +85,25 @@ public class YoutubeService {
             Integer height = high.get("height") != null ? Integer.parseInt(high.get("height").toString()) : 0;
             String channelTitle = snippet.get("channelTitle") != null ? snippet.get("channelTitle").toString() : "";
             String publishTime = snippet.get("publishTime") != null ? snippet.get("publishTime").toString().replace("T", " ").replace("Z", " ") : "";
-
-            result.add(new YoutubeEntity(videoId, searchTxt, publishedAt, channelId, title, description, thumbnailsUrl, width, height, channelTitle, publishTime));
+            if(videoId == null || videoId.equals("")) {
+                return;
+            }
+            if(youtubeRepository.findByVideoId(videoId) == null) {
+                result.add(new YoutubeEntity(videoId, searchTxt, publishedAt, channelId, title, description, thumbnailsUrl, width, height, channelTitle, publishTime));
+            }
         });
         return result;
     }
 
 
     @Transactional
-    public void postBoast(PostBoastDto boastDto) {
+    public BoastEntity postBoast(PostBoastDto boastDto) {
         BoastEntity boastEntity = null;
         List<YoutubeEntity> boastList = new ArrayList<>(youtubeRepository.findByVideoIds(Arrays.asList(boastDto.getItems().split(","))));
         List<YoutubeEntity> list = DeDuplicationUtils.DeDuplication(boastList, YoutubeEntity::getVideoId);
         if(boastRepository.findByUserUuid(boastDto.getUserUuid()) != null) {
             boastEntity = boastRepository.findByUserUuid(boastDto.getUserUuid());
+            boastEntity.setTitle(boastDto.getTitle());
             boastEntity.setBoastList(list);
             boastEntity.setModTsp(new Date());
         } else {
@@ -95,6 +111,7 @@ public class YoutubeService {
 
             boastRepository.save(boastEntity);
         }
+        return boastEntity;
     }
 
     public List<BoastDto> findAllBoastList() {
@@ -123,6 +140,17 @@ public class YoutubeService {
         return entity;
     }
 
+    public GetLikeEntity findByUserUuid(String userUuid) {
+        LikeYoutubeEntity likeYoutubeEntity = likeYoutubeRepository.findByUserUuid(userUuid);
+
+        if(likeYoutubeEntity != null) {
+            return new GetLikeEntity(likeYoutubeEntity);
+        } else {
+            return new GetLikeEntity(userUuid);
+        }
+
+    }
+
     @Transactional
     public BoastEntity postLikeBoast(Long id) {
         BoastEntity entity = boastRepository.findById(id).get();
@@ -134,5 +162,39 @@ public class YoutubeService {
     @Transactional
     public void deleteBoast(DeleteBoastDto boastDto) {
         boastRepository.deleteByUserUuid(boastDto.getUserUuid());
+    }
+
+    @Transactional
+    public LikeYoutubeEntity postLikeVideo(PostLikeDto likeDto) {
+        YoutubeEntity youtubeEntity = youtubeRepository.findByVideoId(likeDto.getVideoId());
+
+        LikeYoutubeEntity likeYoutube = likeYoutubeRepository.findByUserUuid(likeDto.getUserUuid());
+        LikeYoutubeEntity likeYoutubeEntity = null;
+
+        if(likeYoutube == null) {
+            List<YoutubeEntity> youtubeEntities = new ArrayList<>();
+            youtubeEntities.add(youtubeEntity);
+            likeYoutubeEntity = new LikeYoutubeEntity();
+            likeYoutubeEntity.setUserUuid(likeDto.getUserUuid());
+            likeYoutubeEntity.setYoutubeList(youtubeEntities);
+
+            likeYoutubeRepository.save(likeYoutubeEntity);
+        } else {
+            likeYoutube.getYoutubeList().add(youtubeEntity);
+        }
+
+        return likeYoutubeEntity;
+    }
+
+    @Transactional
+    public void deleteLikeVideo(DeleteLikeDto deleteLikeDto) {
+        YoutubeEntity youtubeEntity = youtubeRepository.findByVideoId(deleteLikeDto.getVideoId());
+        LikeYoutubeEntity likeYoutube = likeYoutubeRepository.findByUserUuid(deleteLikeDto.getUserUuid());
+
+        likeYoutube.getYoutubeList().remove(youtubeEntity);
+    }
+
+    public BoastEntity findMyBoast(String userUuid) {
+        return boastRepository.findByUserUuid(userUuid);
     }
 }

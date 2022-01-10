@@ -3,14 +3,14 @@ package xyz.hjtech.myyoutubeproject.youtube.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import xyz.hjtech.myyoutubeproject.youtube.model.BoastEntity;
+import xyz.hjtech.myyoutubeproject.youtube.model.LikeYoutubeEntity;
 import xyz.hjtech.myyoutubeproject.youtube.model.YoutubeEntity;
-import xyz.hjtech.myyoutubeproject.youtube.model.dto.BoastDto;
-import xyz.hjtech.myyoutubeproject.youtube.model.dto.DeleteBoastDto;
-import xyz.hjtech.myyoutubeproject.youtube.model.dto.PostBoastDto;
+import xyz.hjtech.myyoutubeproject.youtube.model.dto.*;
 import xyz.hjtech.myyoutubeproject.youtube.service.YoutubeService;
 
 import java.util.List;
 
+@CrossOrigin("*")
 @RestController
 @RequiredArgsConstructor
 public class YoutubeApiController {
@@ -22,49 +22,56 @@ public class YoutubeApiController {
 
     private final YoutubeService youtubeService;
 
-    @CrossOrigin("*")
     @GetMapping("/youtube/{searchTxt}")
-    public List<YoutubeEntity> findBySearchTxt(@PathVariable String searchTxt) {
-        return youtubeService.findBySearchTxt(searchTxt);
+    public List<GetYoutubeDto> findBySearchTxt(@PathVariable String searchTxt, @RequestParam("userUuid") String userUuid) {
+        return youtubeService.findBySearchTxt(searchTxt, userUuid);
     }
 
-    @CrossOrigin("*")
     @GetMapping("/youtube/like")
-    public List<YoutubeEntity> findByVideoIds(@RequestParam("ids") List<String> ids){
-        return youtubeService.findByVideoIds(ids);
+    public GetLikeEntity findByUserUuid(@RequestParam("userUuid") String userUuid){
+        return youtubeService.findByUserUuid(userUuid);
     }
 
-    @CrossOrigin("*")
+    @PostMapping("/youtube/like")
+    public LikeYoutubeEntity postLikeVideo(@RequestBody PostLikeDto likeDto) {
+        return youtubeService.postLikeVideo(likeDto);
+    }
+
+    @DeleteMapping("/youtube/like")
+    public void deleteLikeVideo(@RequestBody DeleteLikeDto deleteLikeDto) {
+        youtubeService.deleteLikeVideo(deleteLikeDto);
+    }
+
+    @GetMapping("/youtube/my/boast")
+    public BoastEntity findMyBoast(@RequestParam("userUuid") String userUuid) {
+        return youtubeService.findMyBoast(userUuid);
+    }
+
     @PostMapping("/youtube/boast")
-    public void insertBoardList(@RequestBody PostBoastDto boastDto) {
-        youtubeService.postBoast(boastDto);
+    public BoastEntity insertBoardList(@RequestBody PostBoastDto boastDto) {
+        return youtubeService.postBoast(boastDto);
     }
 
-    @CrossOrigin("*")
     @GetMapping("/youtube/boast/list")
     public List<BoastDto> findAllBoastList() {
         return youtubeService.findAllBoastList();
     }
 
-    @CrossOrigin("*")
     @GetMapping("/youtube/boast/{id}")
     public BoastEntity findBoastById(@PathVariable Long id) {
         return youtubeService.findBoastById(id);
     }
 
-    @CrossOrigin("*")
     @GetMapping("/youtube/boast")
     public List<BoastDto> findBoastBySearchTxt(@RequestParam("searchTxt") String searchTxt) {
         return youtubeService.findBoastBySearchTxt(searchTxt);
     }
 
-    @CrossOrigin("*")
     @PostMapping("/youtube/boast/like/{id}")
     public BoastEntity postLikeBoast(@PathVariable("id") Long id) {
         return youtubeService.postLikeBoast(id);
     }
 
-    @CrossOrigin("*")
     @DeleteMapping("/youtube/boast")
     public void deleteBoast(@RequestBody DeleteBoastDto boastDto) {
         youtubeService.deleteBoast(boastDto);
